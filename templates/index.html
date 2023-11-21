@@ -15,6 +15,7 @@
 
         
         let interpolation = false
+        let draw_hotspot = false
         
         var clickedPoint = { x: 640, y: 480 };
         var lastMousePoint = { x: 648, y: 488 };
@@ -56,6 +57,7 @@
 
             const select = document.querySelector('select');
             const checkbox = document.getElementById('interpolationCheckbox'); 
+            const hotspotCheckbox = document.getElementById('hotspotCheckbox'); 
             const pointTemp = document.getElementById('pointTemp'); 
             const mouseTemp = document.getElementById('mouseTemp'); 
             
@@ -103,9 +105,11 @@
             }
             
             function setInterpolation(){
-                if(interpolation){
-                    interpolation = false
-                }else interpolation = true
+                interpolation = !interpolation
+            }
+
+            function setHotspot(){
+                draw_hotspot = !draw_hotspot
             }
             
             function handleMouseClick(event){
@@ -147,39 +151,51 @@
             }
             
             function drawThermalImage(cellWidth, cellHeight){
-                    for (let i = 0; i < lastFrame.frameData.length; i++) {
 
-                        const row = Math.floor(i / 32);
-                        const col = i % 32;
+                let MAX_TEMP = Math.max(...lastFrame.frameData)
+                let MIN_TEMP = Math.min(...lastFrame.frameData)
+                const maxTempIndex = lastFrame.frameData.indexOf(MAX_TEMP);
 
-                        let MAX_TEMP = Math.max(...lastFrame.frameData)
-                        let MIN_TEMP = Math.min(...lastFrame.frameData)
-                        if (MIN_TEMP < -40) {
-                            MIN_TEMP = Math.min.apply(null, lastFrame.frameData.filter(n => n != MIN_TEMP));
-                        }
+                for (let i = 0; i < lastFrame.frameData.length; i++) {
 
-                        let temp = (lastFrame.frameData[i] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
-                        
-                        if (temp < 0 || isNaN(temp)) {
-                            temp = lastFrame.frameData[i - 1] / MAX_TEMP
-                             
-                        }
-                        const selectedCmap = select.value;
-                        const color = evaluate_cmap(temp, selectedCmap, false);
-                        
-                        if(interpolation){
-                            
-                            //LOGIC OF INTERPOLATED cmap shown!!!
-                            
-                        }  
-                        
-                        else{
-                            ctx.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
-                            ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
-                        }
-                        
+                    const row = Math.floor(i / 32);
+                    const col = i % 32;
+
+                    if (MIN_TEMP < -40) {
+                        MIN_TEMP = Math.min.apply(null, lastFrame.frameData.filter(n => n != MIN_TEMP));
                     }
-            
+
+                    let temp = (lastFrame.frameData[i] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
+                    
+                    if (temp < 0 || isNaN(temp)) {
+                        temp = lastFrame.frameData[i - 1] / MAX_TEMP
+                            
+                    }
+                    const selectedCmap = select.value;
+                    const color = evaluate_cmap(temp, selectedCmap, false);
+                    
+                    if(interpolation){
+                        
+                        //LOGIC OF INTERPOLATED cmap shown!!!
+                        
+                    }else{
+                        ctx.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
+                        ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
+
+
+                        if (draw_hotspot && i === maxTempIndex) {
+                            ctx.fillStyle = 'rgb(' + 255 + ',' + 255 + ',' + 255 + ')';
+                            ctx.fillRect((col * cellWidth) + (cellWidth / 2) , (row * cellHeight) + (cellHeight / 2), cellWidth / 2, cellHeight / 2);
+
+                            ctx.font = "8px Comic Sans MS";
+                            ctx.fillStyle = "red";
+                            ctx.fillText(String(temp) + 'C', col * cellWidth, row * cellHeight); 
+
+                        }
+                    }
+                    
+                }
+        
             
             }
             
@@ -257,6 +273,7 @@
 
             select.addEventListener('change', updateColorMap);
             checkbox.addEventListener('change', setInterpolation);
+            hotspotCheckbox.addEventListener('change', setHotspot);
             document.addEventListener('mousemove', updateMousePoint);
             document.addEventListener('click', handleMouseClick);
 
@@ -280,6 +297,7 @@
     <label>
         Interpolate Image
         <input type="checkbox" id="interpolationCheckbox">
+        <input type="checkbox" id="hotspotCheckbox">
         <input type="text" id="pointTemp" value="Temperature under point" disabled>
         <input type="text" id="mouseTemp" value="Temperature under mouse" disabled>
     </label>
