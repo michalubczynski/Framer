@@ -1,0 +1,16 @@
+Issue of record giph
+	Jednym z problemów które napotkano podczas próby dokumentacji poczyniań był problem z przechwytywaniem ekranu. Instalacja oprogramowania jak: "peek" oraz "byzanz" i wielorazowe próby przechwycenia uinterfejsu użytkownika, kończyły się zapisem do pliku wyłącznie czarnego koloru. Choć wszystkie ustawienia aplikacji działały i możliwość zmiany czasu nagrywania, rozdzielczości, kompresji czy też pola które będzie przchwytywane, żadno z powyższych nie wpływało na rezultat co zawiera nagranie. Instalacja oprogramowania "simplescreenrecorder" przy uruchamianiu aplikacji, jako pierwsze nakierowało na problem, wyświetlając komunikat o treści braku wsparcia dla sesji z systemem Wayland cyt. :"You are using a non-X11 window system (e.g. Wayland) which is currently not supported". Zapoznając się z dokumentacją oprogramowań które do tej pory zastosowano zaobserwowano trend w tego typu aplikacjach do wsparcia bazowo systemów opartych na X11. Wykorzystując kolejno:
+$sudo raspi-conifg
+	Advanced Options-> Wayland-> W1 x11 ( Openbox window manager with X11 backend)
+-zamiast dotychczas
+	Advanced Options-> Wayland-> W2 Wayfire ( Wayfire window manager with manager with Wayland backend)
+$ reboot
+$ echo $XDG_CURRENT_DESKTOP
+ -LXDE
+$ echo $XDG_SESSION_TYPE
+ - x11
+Wówczas każdy z poprzednich edytorów zaczął prawidłowo nagrywać
+
+
+
+
