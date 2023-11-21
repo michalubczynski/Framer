@@ -26,7 +26,7 @@
             canvas.width = width
             canvas.height = height
             const canvasSkala = document.createElement("canvas");
-            canvasSkala.width = 80
+            canvasSkala.width = 100
             canvasSkala.height = height
             const myDiv = document.getElementById('tuJeCanvas');
             
@@ -120,14 +120,18 @@
             
             function drawScale(cellWidth, cellHeight, uniqueArray){
                 
-                    let x =0;
+                    let x = 0;
+                    let y = 10;
                     let iteration = Math.ceil(uniqueArray.length / 24)
-                    
+                    let iterationY = Math.ceil(uniqueArray.length / 24)
+
                     for (let i = 0; i < 24; i++) {
 
                         const rowU = i;
+
                         const colU = 1;
-                        
+                        const colS = 3;
+
                         let MAX_TEMP = Math.max(...uniqueArray)
                         let MIN_TEMP = Math.min(...uniqueArray)
                         if (MIN_TEMP < -40) {
@@ -135,14 +139,23 @@
                         }
                         
                         let temp = (uniqueArray[x] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
-
+                        if( i == 23){
+                            let temp = (uniqueArray[uniqueArray.length-1] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
+                            x = uniqueArray.length-1;
+                        }
                         const selectedCmap = select.value;
                         const color = evaluate_cmap(temp, selectedCmap, false);
                             
                         ctxSkala.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
                         ctxSkala.fillRect(colU * cellWidth, rowU * cellHeight, cellWidth, cellHeight);
-                            
+                        ctxSkala.font = "10px Arial Black";
+                        ctxSkala.strokeStyle= "black"; 
+                        ctxSkala.lineWidth = 0.2;
+
+                        ctxSkala.fillText(uniqueArray[x]+' °C', 50, y );   
+                        ctxSkala.strokeText(uniqueArray[x]+' °C', 50, y );  
                         x = x + iteration;
+                        y = y + 20.25;
                     }
             }
             
@@ -159,7 +172,7 @@
                         }
 
                         let temp = (lastFrame.frameData[i] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
-                        
+
                         if (temp < 0 || isNaN(temp)) {
                             temp = lastFrame.frameData[i - 1] / MAX_TEMP
                              
@@ -191,7 +204,7 @@
                             let tempUnderMouse = row * 32 + column;
                             
                              //mouseTemp.value = 'Mouse position: (' + row + ', ' + column + ',' + tempUnderMouse +')';
-                             mouseTemp.value = 'Mouse position : (' + lastFrame.frameData[tempUnderMouse] + '*C)';
+                             mouseTemp.value = 'Mouse position : (' + lastFrame.frameData[tempUnderMouse] + '°C)';
                     }
                     else    mouseTemp.value = 'Mouse over thermal image';
             
@@ -206,7 +219,7 @@
                             let row = Math.floor((clickedPoint.y / 20)-0.5);
                             let tempUnderPoint = row * 32 + column;
                             
-                             pointTemp.value = 'Point position : (' + lastFrame.frameData[tempUnderPoint] + '*C)';
+                             pointTemp.value = 'Point position : (' + lastFrame.frameData[tempUnderPoint] + '°C)';
                     }
                     else pointTemp.value = 'Click on image to set temperature watch';
             }
@@ -214,7 +227,7 @@
             function updateColorMap() {
                 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
+                ctxSkala.clearRect(0, 0, canvasSkala.width, canvasSkala.height)
                 const cellWidth = canvas.width / 32;
                 const cellHeight = canvas.height / 24;
                 
