@@ -12,6 +12,7 @@
 - Display temperature under the mouse cursor for instant feedback.
 - Right-click to view the temperature at a specific canvas point.
 - Temperature scale on the right side of the canvas for reference.
+- Multi-instance and independent clients in a local network
 
 ## Technologies Used
 
