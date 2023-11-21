@@ -163,6 +163,17 @@
                     }
             }
             
+            function getContrastColor(rgb) {
+                // Extract RGB values
+                const [r, g, b] = rgb.split(',').map(value => parseInt(value));
+
+                // Calculate relative luminance (brightness) using the formula for sRGB
+                const luminance = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
+
+                // Choose white or black as the text color based on luminance
+                return luminance > 0.5 ? 'black' : 'white';
+            }
+
             function drawThermalImage(cellWidth, cellHeight){
 
                 let MAX_TEMP = Math.max(...lastFrame.frameData)
@@ -197,13 +208,33 @@
 
 
                         if (draw_hotspot && i === maxTempIndex) {
-                            ctx.fillStyle = 'rgb(' + 255 + ',' + 255 + ',' + 255 + ')';
-                            ctx.fillRect((col * cellWidth) + (cellWidth / 2) , (row * cellHeight) + (cellHeight / 2), cellWidth / 2, cellHeight / 2);
+                            
+                            let colorCell = color[0]+','+color[1]+','+color[2];
+                            ctx.fillStyle = getContrastColor(colorCell);
+                            console.log('przed:'+colorCell+' po:'+ getContrastColor(colorCell))
+                            let leftTopCornerX = (col * cellWidth) + (cellWidth / 2)
+                            let leftTopCornerY = (row * cellHeight) + (cellHeight / 2)
 
-                            ctx.font = "8px Comic Sans MS";
-                            ctx.fillStyle = "red";
-                            ctx.fillText(String(temp) + 'C', col * cellWidth, row * cellHeight); 
+                            ctx.fillRect(leftTopCornerX, leftTopCornerY, cellWidth / 2, cellHeight / 2);
+                            ctx.font = "20px Arial Black";
+                            ctx.strokeStyle= "black"; 
+                            ctx.lineWidth = 0.2;
+                            let xOfText = col * cellWidth;
+                            let yOfText = row * cellHeight;
 
+                            if(xOfText >= 600){
+                                xOfText = 560
+                            }
+                            if (yOfText == 0 ){
+                                yOfText = 20;
+                                xOfText = xOfText - 45;
+                            }
+                            if(xOfText == 0){
+                                xOfText = 25
+                            }
+
+                            ctx.fillText(lastFrame.frameData[i] + ' °C', xOfText, yOfText); 
+                            ctx.strokeText(lastFrame.frameData[i] + ' °C', xOfText, yOfText); 
                         }
                     }
                     
@@ -213,7 +244,7 @@
             }
             
             function showValueUnderMouse(){
-            
+                if(lastMousePoint){
                     if ( lastMousePoint.x < 647 && lastMousePoint.x > 0 && lastMousePoint.y < 488 && lastMousePoint.y > 0){
                             let column = Math.floor((lastMousePoint.x / 20)-0.5);
                             let row = Math.floor((lastMousePoint.y / 20)-0.5);
@@ -221,9 +252,9 @@
                             
                              //mouseTemp.value = 'Mouse position: (' + row + ', ' + column + ',' + tempUnderMouse +')';
                              mouseTemp.value = 'Mouse position : (' + lastFrame.frameData[tempUnderMouse] + '°C)';
-                    }
+                    }   
                     else    mouseTemp.value = 'Mouse over thermal image';
-            
+                }
             }
             
             
@@ -310,7 +341,12 @@
     <label>
         Interpolate Image
         <input type="checkbox" id="interpolationCheckbox">
+    </label>
+    <label>
+        Show highest temperature
         <input type="checkbox" id="hotspotCheckbox">
+    </label>
+    <label>
         <input type="text" id="pointTemp" value="Temperature under point" disabled>
         <input type="text" id="mouseTemp" value="Temperature under mouse" disabled>
     </label>
