@@ -1,28 +1,289 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
     <title>Flask-SocketIO Test</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="static/js/js-colormaps.js"></script>
+    <script type="text/javascript" src="static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
     <script type="text/javascript" charset="utf-8">
-        $(document).ready(function() {
+
+        const width = 640
+        const height = 480
+        
+
+        
+        let interpolation = false
+        
+        var clickedPoint = { x: 640, y: 480 };
+        var lastMousePoint = { x: 648, y: 488 };
+
+
+        $(document).ready(function () {
+            
+            const canvas = document.createElement("canvas");
+            canvas.width = width
+            canvas.height = height
+            const canvasSkala = document.createElement("canvas");
+            canvasSkala.width = 80
+            canvasSkala.height = height
+            const myDiv = document.getElementById('tuJeCanvas');
+            
+            myDiv.appendChild(canvas);
+            myDiv.appendChild(canvasSkala);
+
+            const ctx = canvas.getContext("2d");
+            
+            ctx.imageSmoothingEnabled = true;
+            ctx.mozImageSmoothingEnabled = true;
+            ctx.webkitImageSmoothingEnabled = true;
+            ctx.msImageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high"
+            
+            
+            // Dla skali temperatur
+            
+            const ctxSkala = canvasSkala.getContext("2d");
+            
+            ctxSkala.imageSmoothingEnabled = true;
+            ctxSkala.mozImageSmoothingEnabled = true;
+            ctxSkala.webkitImageSmoothingEnabled = true;
+            ctxSkala.msImageSmoothingEnabled = true;
+            
+            //////////////////////////////////////////////
+            
+
+            const select = document.querySelector('select');
+            const checkbox = document.getElementById('interpolationCheckbox'); 
+            const pointTemp = document.getElementById('pointTemp'); 
+            const mouseTemp = document.getElementById('mouseTemp'); 
+            
+            let lastFrame;
+
             // Connect to the Socket.IO server.
             // The connection URL has the following format, relative to the current page:
             //     http[s]://<domain>:<port>[/<namespace>]
-            var socket = io();
-
-            socket.emit('collect')
-            // Event handler for new connections.
-            // The callback function is invoked when a connection with the
-            // server is established.
-
-            socket.on('frame', function(frame) {
-                console.log(frame)
+            var socket = io.connect({
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
             });
+                        
+            function interpolateColor(x, y, colors) {
+                    console.log('x:', x, 'y:', y, 'colors:', colors);
+                const x0 = Math.floor(x);
+                const x1 = x0 + 1;
+                const y0 = Math.floor(y);
+                const y1 = y0 + 1;
+
+                const color00 = colors[x0][y0];
+                const color01 = colors[x0][y1];
+                const color10 = colors[x1][y0];
+                const color11 = colors[x1][y1];
+
+                if (!colors || !colors[x0] || !colors[x0][y0] || !colors[x1] || !colors[x1][y1]) {
+                    return [0, 0, 0]; // Provide a default color
+                }
+                    
+                const fracX = x - x0;
+                const fracY = y - y0;
+                
+                const interpolatedColor = [
+                    (1 - fracX) * (1 - fracY) * color00[0] + fracX * (1 - fracY) * color10[0] +
+                    (1 - fracX) * fracY * color01[0] + fracX * fracY * color11[0],
+                    (1 - fracX) * (1 - fracY) * color00[1] + fracX * (1 - fracY) * color10[1] +
+                    (1 - fracX) * fracY * color01[1] + fracX * fracY * color11[1],
+                    (1 - fracX) * (1 - fracY) * color00[2] + fracX * (1 - fracY) * color10[2] +
+                    (1 - fracX) * fracY * color01[2] + fracX * fracY * color11[2],
+                ];
+
+                return interpolatedColor;
+            }
+            
+            function setInterpolation(){
+                if(interpolation){
+                    interpolation = false
+                }else interpolation = true
+            }
+            
+            function handleMouseClick(event){
+                clickedPoint.x = event.clientX;
+                clickedPoint.y = event.clientY;
+            }
+            
+            function updateMousePoint(event){
+                lastMousePoint.x = event.clientX;
+                lastMousePoint.y = event.clientY;
+            }
+            
+            function drawScale(cellWidth, cellHeight, uniqueArray){
+                
+                    let x =0;
+                    let iteration = Math.ceil(uniqueArray.length / 24)
+                    
+                    for (let i = 0; i < 24; i++) {
+
+                        const rowU = i;
+                        const colU = 1;
+                        
+                        let MAX_TEMP = Math.max(...uniqueArray)
+                        let MIN_TEMP = Math.min(...uniqueArray)
+                        if (MIN_TEMP < -40) {
+                            MIN_TEMP = Math.min.apply(null, uniqueArray.filter(n => n != MIN_TEMP));
+                        }
+                        
+                        let temp = (uniqueArray[x] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
+
+                        const selectedCmap = select.value;
+                        const color = evaluate_cmap(temp, selectedCmap, false);
+                            
+                        ctxSkala.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
+                        ctxSkala.fillRect(colU * cellWidth, rowU * cellHeight, cellWidth, cellHeight);
+                            
+                        x = x + iteration;
+                    }
+            }
+            
+            function drawThermalImage(cellWidth, cellHeight){
+                    for (let i = 0; i < lastFrame.frameData.length; i++) {
+
+                        const row = Math.floor(i / 32);
+                        const col = i % 32;
+
+                        let MAX_TEMP = Math.max(...lastFrame.frameData)
+                        let MIN_TEMP = Math.min(...lastFrame.frameData)
+                        if (MIN_TEMP < -40) {
+                            MIN_TEMP = Math.min.apply(null, lastFrame.frameData.filter(n => n != MIN_TEMP));
+                        }
+
+                        let temp = (lastFrame.frameData[i] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
+                        
+                        if (temp < 0 || isNaN(temp)) {
+                            temp = lastFrame.frameData[i - 1] / MAX_TEMP
+                             
+                        }
+                        const selectedCmap = select.value;
+                        const color = evaluate_cmap(temp, selectedCmap, false);
+                        
+                        if(interpolation){
+                            
+                            //LOGIC OF INTERPOLATED cmap shown!!!
+                            
+                        }  
+                        
+                        else{
+                            ctx.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
+                            ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
+                        }
+                        
+                    }
+            
+            
+            }
+            
+            function showValueUnderMouse(){
+            
+                    if ( lastMousePoint.x < 647 && lastMousePoint.x > 0 && lastMousePoint.y < 488 && lastMousePoint.y > 0){
+                            let column = Math.floor((lastMousePoint.x / 20)-0.5);
+                            let row = Math.floor((lastMousePoint.y / 20)-0.5);
+                            let tempUnderMouse = row * 32 + column;
+                            
+                             //mouseTemp.value = 'Mouse position: (' + row + ', ' + column + ',' + tempUnderMouse +')';
+                             mouseTemp.value = 'Mouse position : (' + lastFrame.frameData[tempUnderMouse] + '*C)';
+                    }
+                    else    mouseTemp.value = 'Mouse over thermal image';
+            
+            }
+            
+            
+            function showValueOfSelectedPoint(){
+            
+                    if(clickedPoint.x < 640 && clickedPoint.y < 480){
+                    
+                            let column = Math.floor((clickedPoint.x / 20)-0.5);
+                            let row = Math.floor((clickedPoint.y / 20)-0.5);
+                            let tempUnderPoint = row * 32 + column;
+                            
+                             pointTemp.value = 'Point position : (' + lastFrame.frameData[tempUnderPoint] + '*C)';
+                    }
+                    else pointTemp.value = 'Click on image to set temperature watch';
+            }
+            
+            function updateColorMap() {
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const cellWidth = canvas.width / 32;
+                const cellHeight = canvas.height / 24;
+                
+                showValueUnderMouse();
+                showValueOfSelectedPoint();
+
+                
+                var dataToSort = lastFrame.frameData.slice();
+                
+                dataToSort.sort(function(a, b) {
+                  return b - a;
+                });
+                
+                var uniqueArray = dataToSort.filter(function(value, index, self) {
+                  return self.indexOf(value) === index;
+                });
+
+                
+                if (lastFrame && lastFrame.frameData) {
+                    
+                    drawThermalImage(cellWidth, cellHeight);
+                    drawScale(cellWidth, cellHeight, uniqueArray);
+                    
+                }
+            }
+
+            socket.on('frame', function (frame) {
+                // Update lastFrame when a new frame is received
+                lastFrame = frame;
+                updateColorMap();
+            });
+
+            socket.on('connect', function () {
+                console.log('connected');
+                socket.emit('collect');
+            });
+            socket.on('disconnect', function () {
+                console.log('disconnected');
+            });
+
+            select.addEventListener('change', updateColorMap);
+            checkbox.addEventListener('change', setInterpolation);
+            document.addEventListener('mousemove', updateMousePoint);
+            document.addEventListener('click', handleMouseClick);
+
+
         });
     </script>
 </head>
+
 <body>
-   
+    <div id="tuJeCanvas" width="640" height="480"></div>
+    <div id="tuJeSkala" width="80" height="480"></div>
+    <select>
+        <option value="inferno">Inferno</option>
+        <option value="plasma">Plasma</option>
+        <option value="rainbow">Rainbow</option>
+        <option value="seismic">Seismic</option>
+        <option value="Greys">Greys</option>
+        <option value="hot">Hot</option>
+        <option value="seismic">Hot and Cold</option>
+    </select>
+    <label>
+        Interpolate Image
+        <input type="checkbox" id="interpolationCheckbox">
+        <input type="text" id="pointTemp" value="Temperature under point" disabled>
+        <input type="text" id="mouseTemp" value="Temperature under mouse" disabled>
+    </label>
+
 </body>
+
 </html>
