@@ -1,7 +1,7 @@
 # Framer.py - Thermal Camera Data Visualization
 
 ## Overview
-![Framer.py Demo](interfaceWithWatch.gif)
+![Framer.py Demo](UI.gif)
 
 **Framer.py** is a Python application that visualizes thermal camera data from the MLX90640 model connected to a Raspberry Pi 4B via the I2C bus. The application utilizes SocketIO, Adafruit libraries, and Flask to provide a real-time interactive experience. Explore and analyze temperature distributions in a user-friendly HTML canvas.
 
