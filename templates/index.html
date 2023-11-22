@@ -5,7 +5,9 @@
     <title>Framer</title>
 
     <script type="text/javascript" src="static/js/js-colormaps.js"></script>
+    <script type="text/javascript" src="static/js/FileSaver.js"></script>
     <script type="text/javascript" src="static/js/jquery.min.js"></script>
+    <script type="text/javascript" src="static/js/canvas-toBlob.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
     <script type="text/javascript" charset="utf-8">
 
@@ -58,6 +60,9 @@
             const select = document.querySelector('select');
             const checkbox = document.getElementById('interpolationCheckbox'); 
             const hotspotCheckbox = document.getElementById('hotspotCheckbox'); 
+            const toggleVideoRecordingButton = document.getElementById('toggleVideoRecording');
+            const startTimeLapseButton = document.getElementById('startTimeLapse');
+            const takePhotoButton = document.getElementById('takePhoto');
             const pointTemp = document.getElementById('pointTemp'); 
             const mouseTemp = document.getElementById('mouseTemp'); 
             
@@ -269,6 +274,41 @@
                     }
                     else pointTemp.value = 'Click on image to set temperature watch';
             }
+            function getDate(){
+                var currentdate = new Date(); 
+                var datetime = currentdate.getDate() + "/"
+                + (currentdate.getMonth()+1)  + "/" 
+                + currentdate.getFullYear() + " @ "  
+                + currentdate.getHours() + ":"  
+                + currentdate.getMinutes() + ":" 
+                + currentdate.getSeconds();
+                return datetime;
+            }
+            function takePhoto() {
+
+                canvas.toBlob(function(blob) {
+                    saveAs(blob, "thermalImage"+getDate()+".png");
+                });
+                console.log("Photo taken!");
+            }
+
+            function toggleVideoRecording() {
+
+                // Add logic to start/stop video recording
+                console.log("Video recording toggled!");
+            }
+
+            function startTimelapse() {
+                // Add logic to start time-lapse with the specified duration and frequency
+                var duration = document.getElementById("duration").value;
+                var frequency = document.getElementById("frequency").value;
+                if(frequency > duration * 2){  
+                        startTimeLapseButton.style.border = "2px solid red";
+                        }
+                else    startTimeLapseButton.style.border = "1px solid black";
+
+                console.log("Timelapse started with duration: " + duration + " seconds, frequency: " + frequency + " seconds");
+            }
             
             function updateColorMap() {
                 
@@ -296,7 +336,6 @@
                     
                     drawThermalImage(cellWidth, cellHeight);
                     drawScale(cellWidth, cellHeight, uniqueArray);
-                    
                 }
             }
 
@@ -317,6 +356,9 @@
             select.addEventListener('change', updateColorMap);
             checkbox.addEventListener('change', setInterpolation);
             hotspotCheckbox.addEventListener('change', setHotspot);
+            toggleVideoRecordingButton.addEventListener('click', toggleVideoRecording);
+            startTimeLapseButton.addEventListener('click', startTimelapse);
+            takePhotoButton.addEventListener('click',takePhoto)
             document.addEventListener('mousemove', updateMousePoint);
             document.addEventListener('click', handleMouseClick);
 
@@ -337,18 +379,35 @@
         <option value="hot">Hot</option>
         <option value="seismic">Hot and Cold</option>
     </select>
+    <br>
+
     <label>
         Interpolate Image
         <input type="checkbox" id="interpolationCheckbox">
     </label>
+    <br>
     <label>
         Show highest temperature
         <input type="checkbox" id="hotspotCheckbox">
     </label>
+    <br>
     <label>
         <input type="text" id="pointTemp" value="Temperature under point" disabled>
         <input type="text" id="mouseTemp" value="Temperature under mouse" disabled>
     </label>
+    <!-- Button to take a photo -->
+    <br>
+    <button id='takePhoto'>Take Photo</button>
+    <!-- Button to start and stop recording video -->
+    <button id='toggleVideoRecording'>Start/Stop Recording</button>
+
+    <br>
+    <!-- Button and input box for time-lapse -->
+    <button id='startTimeLapse'>Start Timelapse</button>
+    <label for="duration">Duration (seconds): </label>
+        <input type="number" id="duration" value="10">
+    <label for="frequency">Frequency (seconds): </label>
+        <input type="number" id="frequency" value="2" min="1">
 
 </body>
 
