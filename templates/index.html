@@ -25,6 +25,7 @@
 
         $(document).ready(function () {
             
+            
             const canvas = document.createElement("canvas");
             canvas.width = width
             canvas.height = height
@@ -291,8 +292,61 @@
                 });
                 console.log("Photo taken!");
             }
+            
+            var mediaRecorder;
+            var recordedChunks = [];
+
+            function record(canvas) {
+                return new Promise(function (res, rej) {
+                    var stream = canvas.captureStream(30 /*fps*/);
+
+                    // ondataavailable will fire in interval of `time || 500 ms`
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: "video/webm; codecs=h264"
+                    });
+
+                    mediaRecorder.ondataavailable = function (event) {
+                        recordedChunks.push(event.data);
+
+                        // after stop `dataavilable` event runs one more time
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                    }
+
+                    mediaRecorder.onstop = function (event) {
+                        var blob = new Blob(recordedChunks, { type: "video/mp4" });
+                        var url = URL.createObjectURL(blob);
+                        res(url);
+                    }
+
+                    // Remove any previous recorded chunks
+                    recordedChunks = [];
+
+                    // Start recording
+                    mediaRecorder.start(600000); //600s|10min -> max time to end video
+                });
+            }
 
             function toggleVideoRecording() {
+                if (toggleVideoRecordingButton.textContent == 'Stop recording') {
+
+                    toggleVideoRecordingButton.textContent = 'Start recording'
+                    mediaRecorder.stop(); // after stop `dataavilable` event runs one more time
+                    mediaRecorder.stop();
+                }
+                else {
+                    toggleVideoRecordingButton.textContent = 'Stop recording'
+                    // download it
+                    var link$ = document.createElement('a')
+                    link$.setAttribute('download', 'thermalVideo' + getDate())
+                    recording = record(canvas);
+                    
+                    recording.then(url => {
+                        link$.setAttribute('href', url)
+                        link$.click()
+                    });
+                }
 
                 // Add logic to start/stop video recording
                 console.log("Video recording toggled!");
@@ -399,7 +453,7 @@
     <br>
     <button id='takePhoto'>Take Photo</button>
     <!-- Button to start and stop recording video -->
-    <button id='toggleVideoRecording'>Start/Stop Recording</button>
+    <button id='toggleVideoRecording'>Start recording</button>
 
     <br>
     <!-- Button and input box for time-lapse -->
