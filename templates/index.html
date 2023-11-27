@@ -16,7 +16,6 @@
         
 
         
-        let interpolation = false
         let draw_hotspot = false
         
         var clickedPoint = { x: 640, y: 480 };
@@ -59,14 +58,16 @@
             
 
             const select = document.querySelector('select');
-            const checkbox = document.getElementById('interpolationCheckbox'); 
             const hotspotCheckbox = document.getElementById('hotspotCheckbox'); 
             const toggleVideoRecordingButton = document.getElementById('toggleVideoRecording');
             const startTimeLapseButton = document.getElementById('startTimeLapse');
             const takePhotoButton = document.getElementById('takePhoto');
             const pointTemp = document.getElementById('pointTemp'); 
             const mouseTemp = document.getElementById('mouseTemp'); 
-            
+            const selectMap = document.getElementById('selectMap'); 
+            const selectFreq = document.getElementById('selectFreq'); 
+            const durationInt = document.getElementById('duration'); 
+
             let lastFrame;
 
             // Connect to the Socket.IO server.
@@ -110,9 +111,6 @@
                 return interpolatedColor;
             }
             
-            function setInterpolation(){
-                interpolation = !interpolation
-            }
 
             function setHotspot(){
                 draw_hotspot = !draw_hotspot
@@ -130,6 +128,12 @@
             
             function drawScale(cellWidth, cellHeight, uniqueArray){
                 
+                    ctxSkala.fillStyle = "white";
+                    ctxSkala.fillRect(0, 0, 100, 480);
+
+                    // Set the border color to black
+                    ctxSkala.strokeStyle = "2px black";
+                    ctxSkala.strokeRect(1, 0, 100, 479);
                     let x = 0;
                     let y = 10;
                     let iteration = Math.ceil(uniqueArray.length / 24)
@@ -153,11 +157,13 @@
                             let temp = (uniqueArray[uniqueArray.length-1] - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)
                             x = uniqueArray.length-1;
                         }
-                        const selectedCmap = select.value;
+                        const selectedCmap = selectMap.value;
                         const color = evaluate_cmap(temp, selectedCmap, false);
-                            
+                        
+
+                        
                         ctxSkala.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
-                        ctxSkala.fillRect(colU * cellWidth, rowU * cellHeight, cellWidth, cellHeight);
+                        ctxSkala.fillRect(colU * cellWidth-2, rowU * cellHeight, cellWidth-2, cellHeight);
                         ctxSkala.font = "10px Arial Black";
                         ctxSkala.strokeStyle= "black"; 
                         ctxSkala.lineWidth = 0.2;
@@ -204,11 +210,7 @@
                     const selectedCmap = select.value;
                     const color = evaluate_cmap(temp, selectedCmap, false);
                     
-                    if(interpolation){
-                        
-                        //LOGIC OF INTERPOLATED cmap shown!!!
-                        
-                    }else{
+                    
                         ctx.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
                         ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
 
@@ -217,8 +219,8 @@
                             
                             let colorCell = color[0]+','+color[1]+','+color[2];
                             ctx.fillStyle = getContrastColor(colorCell);
-                            let leftTopCornerX = (col * cellWidth) + (cellWidth / 2)
-                            let leftTopCornerY = (row * cellHeight) + (cellHeight / 2)
+                            let leftTopCornerX = (col * cellWidth) + (cellWidth / 2)-5
+                            let leftTopCornerY = (row * cellHeight) + (cellHeight / 2)-5
 
                             ctx.fillRect(leftTopCornerX, leftTopCornerY, cellWidth / 2, cellHeight / 2);
                             ctx.font = "20px Arial Black";
@@ -241,7 +243,22 @@
                             ctx.fillText(lastFrame.frameData[i] + ' °C', xOfText, yOfText); 
                             ctx.strokeText(lastFrame.frameData[i] + ' °C', xOfText, yOfText); 
                         }
-                    }
+                        if(clickedPoint){
+                            if(clickedPoint.x < 640 && clickedPoint.y < 480){
+                    
+                            let columnp = Math.floor((clickedPoint.x / 20)-0.5);
+                            let rowp = Math.floor((clickedPoint.y / 20)-0.5);
+
+                            let colorCell = color[0]+','+color[1]+','+color[2];
+                            ctx.fillStyle = getContrastColor(colorCell);
+                            let leftTopCornerX = (columnp * cellWidth) + (cellWidth / 2) -5
+                            let leftTopCornerY = (rowp * cellHeight) + (cellHeight / 2) -5
+                            ctx.fillRect(leftTopCornerX, leftTopCornerY, cellWidth / 2, cellHeight / 2);
+                            }
+                        }
+                        
+            
+                    
                     
                 }
         
@@ -264,7 +281,6 @@
             
             
             function showValueOfSelectedPoint(){
-            
                     if(clickedPoint.x < 640 && clickedPoint.y < 480){
                     
                             let column = Math.floor((clickedPoint.x / 20)-0.5);
@@ -275,6 +291,7 @@
                     }
                     else pointTemp.value = 'Click on image to set temperature watch';
             }
+
             function getDate(){
                 var currentdate = new Date(); 
                 var datetime = currentdate.getDate() + "/"
@@ -286,10 +303,18 @@
                 return datetime;
             }
             function takePhoto() {
+            const mergedCanvas = document.createElement("canvas");
+            const mergedContext = mergedCanvas.getContext("2d");
 
-                canvas.toBlob(function(blob) {
-                    saveAs(blob, "thermalImage"+getDate()+".png");
-                });
+            mergedCanvas.width = canvas.width + canvasSkala.width;
+            mergedCanvas.height = Math.max(canvas.height, canvasSkala.height);
+
+            mergedContext.drawImage(canvas, 0, 0);
+            mergedContext.drawImage(canvasSkala, canvas.width, 0);
+
+            mergedCanvas.toBlob(function(blob) {
+                saveAs(blob, "thermalImage" + getDate() + ".png");
+            });
                 console.log("Photo taken!");
             }
             
@@ -298,7 +323,7 @@
 
             function record(canvas) {
                 return new Promise(function (res, rej) {
-                    var stream = canvas.captureStream(30 /*fps*/);
+                    var stream = canvas.captureStream(2 /*fps*/);
 
                     // ondataavailable will fire in interval of `time || 500 ms`
                     mediaRecorder = new MediaRecorder(stream, {
@@ -327,17 +352,61 @@
                     mediaRecorder.start(600000); //600s|10min -> max time to end video
                 });
             }
+            function timeLapse(canvas, fps, time) {
+                return new Promise(function (res, rej) {
+                    var stream = canvas.captureStream(fps /*fps*/);
+
+                    // ondataavailable will fire in interval of `time || 500 ms`
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: "video/webm; codecs=h264"
+                    });
+
+                    mediaRecorder.ondataavailable = function (event) {
+                        recordedChunks.push(event.data);
+
+                        // after stop `dataavilable` event runs one more time
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                    }
+
+                    mediaRecorder.onstop = function (event) {
+                        toggleVideoRecordingButton.disabled = false;
+                        startTimeLapseButton.disabled = false;
+                        takePhotoButton.disabled = false;
+                        selectFreq.disabled = false;
+                        durationInt.disabled = false;
+                        var blob = new Blob(recordedChunks, { type: "video/mp4" });
+                        var url = URL.createObjectURL(blob);
+                        res(url);
+                    }
+
+                    // Remove any previous recorded chunks
+                    recordedChunks = [];
+
+                    // Start recording
+                    mediaRecorder.start(time * 1000); //600s|10min -> max time to end video
+                });
+            }
 
             function toggleVideoRecording() {
                 if (toggleVideoRecordingButton.textContent == 'Stop recording') {
-
+                    
                     toggleVideoRecordingButton.textContent = 'Start recording'
+                    startTimeLapseButton.disabled = false;
+                    takePhotoButton.disabled = false;
+                    selectFreq.disabled = false;
+                    durationInt.disabled = false;
                     mediaRecorder.stop(); // after stop `dataavilable` event runs one more time
                     mediaRecorder.stop();
                 }
                 else {
                     toggleVideoRecordingButton.textContent = 'Stop recording'
                     // download it
+                    startTimeLapseButton.disabled = true;
+                    takePhotoButton.disabled = true;
+                    selectFreq.disabled = true;
+                    durationInt.disabled = true;
                     var link$ = document.createElement('a')
                     link$.setAttribute('download', 'thermalVideo' + getDate())
                     recording = record(canvas);
@@ -354,14 +423,28 @@
 
             function startTimelapse() {
                 // Add logic to start time-lapse with the specified duration and frequency
-                var duration = document.getElementById("duration").value;
-                var frequency = document.getElementById("frequency").value;
-                if(frequency > duration * 2){  
+                if(selectFreq.value > durationInt.value * 2){  
                         startTimeLapseButton.style.border = "2px solid red";
                         }
-                else    startTimeLapseButton.style.border = "1px solid black";
+                else    {
+                    startTimeLapseButton.style.border = "1px solid black";
 
-                console.log("Timelapse started with duration: " + duration + " seconds, frequency: " + frequency + " seconds");
+                    toggleVideoRecordingButton.disabled = true;
+                    startTimeLapseButton.disabled = true;
+                    takePhotoButton.disabled = true;
+                    selectFreq.disabled = true;
+                    durationInt.disabled = true;
+
+                    var link$ = document.createElement('a')
+                        link$.setAttribute('download', 'thermalVideo' + getDate())
+                        recording = timeLapse(canvas, selectFreq.value, durationInt.value);
+                        
+                        recording.then(url => {
+                            link$.setAttribute('href', url)
+                            link$.click()
+                        });
+                console.log("Timelapse started with duration: " + durationInt.value + " seconds, frequency: " + selectFreq.value + " seconds");
+                }
             }
             
             function updateColorMap() {
@@ -408,10 +491,9 @@
             });
 
             select.addEventListener('change', updateColorMap);
-            checkbox.addEventListener('change', setInterpolation);
             hotspotCheckbox.addEventListener('change', setHotspot);
             toggleVideoRecordingButton.addEventListener('click', toggleVideoRecording);
-            startTimeLapseButton.addEventListener('click', startTimelapse);
+            startTimeLapseButton.addEventListener('click',startTimelapse);
             takePhotoButton.addEventListener('click',takePhoto)
             document.addEventListener('mousemove', updateMousePoint);
             document.addEventListener('click', handleMouseClick);
@@ -424,7 +506,7 @@
 <body>
     <div id="tuJeCanvas" width="640" height="480"></div>
     <div id="tuJeSkala" width="80" height="480"></div>
-    <select>
+    <select id="selectMap">
         <option value="inferno">Inferno</option>
         <option value="plasma">Plasma</option>
         <option value="rainbow">Rainbow</option>
@@ -433,12 +515,6 @@
         <option value="hot">Hot</option>
         <option value="seismic">Hot and Cold</option>
     </select>
-    <br>
-
-    <label>
-        Interpolate Image
-        <input type="checkbox" id="interpolationCheckbox">
-    </label>
     <br>
     <label>
         Show highest temperature
@@ -460,8 +536,11 @@
     <button id='startTimeLapse'>Start Timelapse</button>
     <label for="duration">Duration (seconds): </label>
         <input type="number" id="duration" value="10">
-    <label for="frequency">Frequency (seconds): </label>
-        <input type="number" id="frequency" value="2" min="1">
+    <label for="frequency">Frequency (frames per seconds): </label>
+    <select id="selectFreq">
+        <option value="1">1</option>
+        <option value="2">2</option>
+    </select>
 
 </body>
 
