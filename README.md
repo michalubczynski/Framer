@@ -1,5 +1,7 @@
 # Framer.py - Thermal Camera Data Visualization
-
+[![stability-experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://github.com/emersion/stability-badges#experimental)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-no-red.svg)](https://github.com/ffmpegwasm/ffmpeg.wasm/graphs/commit-activity)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Overview
 ![Framer.py Demo](images/Ui_27_11_23.gif)
 
@@ -10,9 +12,14 @@
 - Real-time visualization of thermal camera data on an HTML canvas.
 - Change the color map using a select box for enhanced data interpretation.
 - Display temperature under the mouse cursor for instant feedback.
-- Right-click to view the temperature at a specific canvas point.
+- Follow the hottest temperature and hottest spot on canvas.
+- Left-click to view the temperature at a specific canvas point.
 - Temperature scale on the right side of the canvas for reference.
+- Capture .png image of actual data in canvas.
+- Start/Stop video recording for up to 10 minutes in highest possible quality 2 FPS
+- Time lapse recording with choice of frame rate.
 - Multi-instance and independent clients in a local network
+- Saving in local host files with precisely date and time of capture.
 
 ## Technologies Used
 
